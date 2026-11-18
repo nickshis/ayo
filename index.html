@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10131b">
+  <title>Тайна праздничного подземелья</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      background: radial-gradient(circle at 50% 30%, #353047, #10131b 70%);
+      color: #f5eee2;
+      font-family: system-ui, sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    button {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:disabled { cursor: default; }
+
+    header {
+      max-width: 900px;
+      margin: auto;
+      padding: 24px;
+      border-bottom: 1px solid #ffffff15;
+      color: #dec18a;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 3px;
+    }
+
+    main {
+      max-width: 560px;
+      margin: auto;
+      padding: 26px 24px 40px;
+    }
+
+    .status {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #aaa6b7;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    .progress {
+      display: flex;
+      gap: 6px;
+      margin: 14px 0 24px;
+    }
+
+    .progress span {
+      flex: 1;
+      height: 4px;
+      border-radius: 4px;
+      background: #ffffff15;
+    }
+
+    .progress .active { background: #dec18a; }
+
+    .scene {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 210px;
+      margin-bottom: 22px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, #dec18a15, transparent 70%);
+    }
+
+    .art {
+      font-size: 100px;
+      line-height: 1.4;
+      filter: drop-shadow(0 16px 18px #0006);
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .sticker {
+      font-size: 130px;
+      filter:
+        drop-shadow(3px 0 #fff7e8)
+        drop-shadow(-3px 0 #fff7e8)
+        drop-shadow(0 3px #fff7e8)
+        drop-shadow(0 -3px #fff7e8);
+    }
+
+    .battle { font-size: 70px; }
+
+    h1 {
+      margin: 0 0 14px;
+      font: 600 42px/1.1 Georgia, serif;
+    }
+
+    p {
+      margin: 0 0 24px;
+      color: #b8b3c4;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      color: #d4ccd9;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    input {
+      width: 100%;
+      padding: 16px;
+      border: 1px solid #ffffff30;
+      border-radius: 12px;
+      outline: none;
+      background: #ffffff06;
+      color: white;
+    }
+
+    input:focus { border-color: #dec18a; }
+
+    .primary {
+      width: 100%;
+      margin-top: 12px;
+      padding: 16px;
+      border: 0;
+      border-radius: 12px;
+      background: #dec18a;
+      color: #282315;
+      font-weight: 750;
+    }
+
+    .choices {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .choice {
+      flex: 1;
+      min-width: 65px;
+      min-height: 70px;
+      padding: 14px;
+      border: 1px solid #ffffff30;
+      border-radius: 12px;
+      background: #ffffff06;
+      color: #f5eee2;
+      font-size: 30px;
+    }
+
+    .choice.selected {
+      border-color: #dec18a;
+      background: #dec18a30;
+      box-shadow: 0 0 20px #dec18a25;
+    }
+
+    .choice.collected { opacity: .2; }
+
+    .message {
+      min-height: 44px;
+      padding-top: 14px;
+      color: #e4c88f;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .hint, .reset {
+      border: 0;
+      background: transparent;
+      color: #a8a2b5;
+      font-size: 12px;
+    }
+
+    .hint { padding: 10px 0; }
+
+    footer {
+      display: flex;
+      justify-content: center;
+      padding: 0 24px 30px;
+    }
+
+    .win { text-align: center; }
+    .win h1 { color: #e8c98c; font-size: 54px; }
+
+    .confetti {
+      position: fixed;
+      top: -30px;
+      z-index: 10;
+      pointer-events: none;
+      animation: fall 4s linear forwards;
+    }
+
+    @keyframes float {
+      50% { transform: translateY(-10px); }
+    }
+
+    @keyframes fall {
+      to { transform: translateY(110vh) rotate(500deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>✧ BIRTHDAY QUEST</header>
+
+  <main>
+    <div class="status">
+      <span id="chapter"></span>
+      <span id="counter"></span>
+    </div>
+
+    <div class="progress" id="progress"></div>
+    <div id="game"></div>
+  </main>
+
+  <footer>
+    <button class="reset" id="reset">Начать заново ↺</button>
+  </footer>
+
+  <script>
+    const $ = selector => document.querySelector(selector);
+    const telegram = window.Telegram?.WebApp;
+    const storageKey = "birthday-quest-progress";
+
+    try {
+      telegram?.ready();
+      telegram?.expand();
+      telegram?.setHeaderColor("#10131b");
+      telegram?.setBackgroundColor("#10131b");
+    } catch {}
+
+    let level = 0;
+    let opened = false;
+    let busy = false;
+    let selected = [];
+    let timers = [];
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey));
+      if (Number.isInteger(saved?.level)) {
+        level = Math.max(0, Math.min(8, saved.level));
+        opened = Boolean(saved.opened);
+      }
+    } catch {}
+
+    const stages = [
+      {
+        chapter: "НАЧАЛО ПУТИ",
+        title: "Запертый подарок",
+        description:
+          "Перед тобой загадочный подарок. Чтобы открыть его и найти вход в подземелье, введи четырёхзначный пароль.",
+        art: "🎁",
+        label: "ВВЕДИ ПАРОЛЬ",
+        placeholder: "Четыре цифры",
+        button: "Открыть подарок",
+        answer: "1404",
+        hint: "Пароль — дата: 14 апреля."
+      },
+      {
+        chapter: "ПОДЗЕМЕЛЬЕ",
+        title: "Разбуди свою магию",
+        description:
+          "Подарок открыл тайный проход! В подземелье дракон преградил путь. Помоги магу произнести заклинание и победить его.",
+        art: "🧙‍♂️ 🐉",
+        label: "ВВЕДИ ЗАКЛИНАНИЕ",
+        placeholder: "Магическое слово",
+        button: "Произнести заклинание",
+        answer: "abracadabra",
+        hint: "Классическое заклинание: abracadabra."
+      },
+      {
+        chapter: "ЗАЛ РУН",
+        title: "Язык древних звёзд",
+        description:
+          "Каменная дверь слушает небеса. Нажми сначала на солнце, потом на луну и в конце на звезду.",
+        art: "🪨",
+        hint: "Порядок: ☀ → ☾ → ★."
+      },
+      {
+        chapter: "АЛХИМИЧЕСКАЯ ЛАВКА",
+        title: "Капля волшебства",
+        description:
+          "Чтобы пройти сквозь туман, приготовь фиолетовое зелье. Выбери два цвета, которые нужно смешать.",
+        art: "⚗️",
+        hint: "Смешай красный и синий."
+      },
+      {
+        chapter: "ЗАБЫТЫЙ САД",
+        title: "Поймай свет",
+        description:
+          "Пять огоньков потерялись в саду. Коснись каждого, чтобы собрать свет для волшебного фонаря.",
+        art: "🏮",
+        hint: "Нажми на все пять огоньков."
+      },
+      {
+        chapter: "ХРАНИТЕЛЬ БИБЛИОТЕКИ",
+        title: "Тихая загадка",
+        description:
+          "Хранитель спрашивает: «Как называется день, который идёт сразу после сегодняшнего?»",
+        art: "🦉",
+        label: "ТВОЙ ОТВЕТ",
+        placeholder: "Одно слово",
+        button: "Ответить хранителю",
+        answer: "завтра",
+        hint: "Сегодня, а после него…"
+      },
+      {
+        chapter: "МОСТ ВОСПОМИНАНИЙ",
+        title: "Запомни сияние",
+        description:
+          "Нажми «Показать последовательность», запомни сияющие кристаллы и повтори их порядок.",
+        art: "🌉",
+        hint: "Последовательность: 💎 → 🔮 → 💎 → 🧿."
+      },
+      {
+        chapter: "ПОСЛЕДНЯЯ ДВЕРЬ",
+        title: "Ключ к чуду",
+        description:
+          "Последний замок хранит простую тайну: сколько огоньков ты собрал в саду?",
+        art: "🚪",
+        label: "ТВОЙ ОТВЕТ",
+        placeholder: "Введи число",
+        button: "Открыть последнюю дверь",
+        answer: "5",
+        hint: "В саду было пять огоньков."
+      }
+    ];
+
+    function save() {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({ level, opened }));
+      } catch {}
+    }
+
+    function later(callback, delay) {
+      const id = setTimeout(callback, delay);
+      timers.push(id);
+    }
+
+    function clearTimers() {
+      timers.forEach(clearTimeout);
+      timers = [];
+    }
+
+    function haptic(type) {
+      try {
+        telegram?.HapticFeedback?.notificationOccurred(type);
+      } catch {}
+    }
+
+    function message(text) {
+      const element = $("#message");
+      if (element) element.textContent = text;
+    }
+
+    function next() {
+      if (busy) return;
+
+      busy = true;
+      haptic("success");
+
+      if (level === 1) {
+        $("#art").textContent = "🧙‍♂️ ✨";
+        message("Дракон повержен! Путь свободен.");
+      } else {
+        message("Получилось! Путь открыт ✦");
+      }
+
+      later(() => {
+        level++;
+        busy = false;
+        save();
+        render();
+      }, 900);
+    }
+
+    function choices(items, callback) {
+      const container = document.createElement("div");
+      container.className = "choices";
+
+      items.forEach((item, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "choice";
+        button.textContent = item;
+        button.setAttribute(
+          "aria-label",
+          level === 4 ? `Огонёк ${index + 1}` : item
+        );
+
+        button.onclick = () => {
+          if (!busy) callback(index, button);
+        };
+
+        container.append(button);
+      });
+
+      $("#controls").append(container);
+    }
+
+    function sequence(index, target) {
+      if (index !== target[selected.length]) {
+        selected = [];
+        message("Порядок сбился. Начни последовательность заново.");
+        haptic("error");
+        return;
+      }
+
+      selected.push(index);
+      message(`Верно: ${selected.length} / ${target.length}`);
+
+      if (selected.length === target.length) next();
+    }
+
+    function inputChallenge(stage) {
+      const form = document.createElement("form");
+      const numeric = level === 0 || level === 7;
+
+      form.innerHTML = `
+        <label for="answer">${stage.label}</label>
+        <input
+          id="answer"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          ${numeric ? 'inputmode="numeric"' : ""}
+          ${level === 0 ? 'maxlength="4"' : ""}
+          placeholder="${stage.placeholder}"
+        >
+        <button class="primary" type="submit">${stage.button} →</button>
+      `;
+
+      form.onsubmit = event => {
+        event.preventDefault();
+        if (busy) return;
+
+        const answer = $("#answer").value.trim().toLowerCase();
+
+        if (answer === stage.answer) {
+          next();
+        } else {
+          haptic("error");
+          message("Пока не получилось. Попробуй ещё раз или открой подсказку.");
+        }
+      };
+
+      $("#controls").append(form);
+    }
+
+    function memoryChallenge() {
+      let watched = false;
+      const target = [0, 1, 0, 2];
+
+      choices(["💎", "🔮", "🧿"], index => {
+        if (!watched) {
+          message("Сначала посмотри последовательность.");
+          return;
+        }
+
+        sequence(index, target);
+      });
+
+      const show = document.createElement("button");
+      show.className = "primary";
+      show.textContent = "Показать последовательность";
+      $("#controls").append(show);
+
+      show.onclick = () => {
+        if (busy) return;
+
+        busy = true;
+        watched = false;
+        selected = [];
+        show.disabled = true;
+        message("Смотри внимательно…");
+
+        const buttons = [...document.querySelectorAll(".choice")];
+
+        target.forEach((index, position) => {
+          later(() => {
+            buttons[index].classList.add("selected");
+          }, position * 850);
+
+          later(() => {
+            buttons[index].classList.remove("selected");
+          }, position * 850 + 600);
+        });
+
+        later(() => {
+          busy = false;
+          watched = true;
+          show.disabled = false;
+          message("Теперь повтори!");
+        }, target.length * 850);
+      };
+    }
+
+    function confetti() {
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+      for (let index = 0; index < 45; index++) {
+        const particle = document.createElement("span");
+        particle.className = "confetti";
+        particle.textContent = ["✦", "✧", "●"][index % 3];
+        particle.style.left = `${Math.random() * 100}%`;
+        particle.style.color = ["#dec18a", "#b49ae8", "#8bc8b1"][index % 3];
+        particle.style.animationDelay = `${Math.random()}s`;
+
+        document.body.append(particle);
+        setTimeout(() => particle.remove(), 5500);
+      }
+    }
+
+    function renderGift() {
+      $("#game").innerHTML = `
+        <section class="win">
+          <div class="scene">
+            <div class="art sticker" role="img" aria-label="Подарок">🎁</div>
+          </div>
+          <h1>${opened ? "Happy Birthday" : "Твоё чудо — здесь"}</h1>
+          ${
+            opened ? "" : `
+              <p>Ты прошёл все испытания. Осталось развязать ленту!</p>
+              <button class="primary" id="openGift">Открыть подарок ✦</button>
+            `
+          }
+        </section>
+      `;
+
+      const button = $("#openGift");
+
+      if (button) {
+        button.onclick = () => {
+          opened = true;
+          save();
+          renderGift();
+          haptic("success");
+          confetti();
+        };
+      }
+    }
+
+    function render() {
+      clearTimers();
+      selected = [];
+      busy = false;
+
+      $("#chapter").textContent =
+        level < 8 ? stages[level].chapter : "ПРИКЛЮЧЕНИЕ ЗАВЕРШЕНО";
+
+      $("#counter").textContent =
+        level < 8 ? `0${level + 1} / 08` : "08 / 08";
+
+      $("#progress").innerHTML = Array.from(
+        { length: 8 },
+        (_, index) =>
+          `<span class="${index <= level ? "active" : ""}"></span>`
+      ).join("");
+
+      if (level === 8) {
+        renderGift();
+        return;
+      }
+
+      const stage = stages[level];
+
+      $("#game").innerHTML = `
+        <div class="scene">
+          <div
+            id="art"
+            class="art ${level === 0 ? "sticker" : ""}
+                       ${level === 1 ? "battle" : ""}"
+            role="img"
+            aria-label="${stage.title}"
+          >${stage.art}</div>
+        </div>
+
+        <h1>${stage.title}</h1>
+        <p>${stage.description}</p>
+
+        <div id="controls"></div>
+        <div id="message" class="message" role="status" aria-live="polite"></div>
+        <button class="hint" id="hint">✧ Нужна подсказка?</button>
+      `;
+
+      $("#hint").onclick = () => message(stage.hint);
+
+      if ([0, 1, 5, 7].includes(level)) {
+        inputChallenge(stage);
+      }
+
+      if (level === 2) {
+        choices(["★", "☀", "☾"], index => sequence(index, [1, 2, 0]));
+      }
+
+      if (level === 3) {
+        choices(["🔴", "🟡", "🔵"], (index, button) => {
+          if (selected.includes(index)) return;
+
+          selected.push(index);
+          button.classList.add("selected");
+
+          if (selected.length === 2) {
+            if (selected.includes(0) && selected.includes(2)) {
+              next();
+            } else {
+              message("Зелье не стало фиолетовым. Попробуй другую смесь.");
+              selected = [];
+
+              document.querySelectorAll(".choice").forEach(element => {
+                element.classList.remove("selected");
+              });
+            }
+          }
+        });
+      }
+
+      if (level === 4) {
+        choices(["✦", "✦", "✦", "✦", "✦"], (index, button) => {
+          if (selected.includes(index)) return;
+
+          selected.push(index);
+          button.classList.add("collected");
+          button.disabled = true;
+          message(`Собрано огоньков: ${selected.length} / 5`);
+
+          if (selected.length === 5) next();
+        });
+      }
+
+      if (level === 6) memoryChallenge();
+    }
+
+    $("#reset").onclick = () => {
+      if (!confirm("Начать приключение заново?")) return;
+
+      clearTimers();
+      level = 0;
+      opened = false;
+      busy = false;
+      save();
+      render();
+    };
+
+    render();
+  </script>
+</body>
+</html>
