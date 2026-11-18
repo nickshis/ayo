@@ -579,20 +579,44 @@
 
         if (button) {
           button.onclick = () => {
-          opened = true;
-          save();
-          renderGift();
-          haptic("success");
-          confetti();
+  opened = true;
+  save();
+  renderGift();
+  haptic("success");
+  confetti();
 
-          const videoUrl = "https://youtu.be/eC8Eov-r1oc?si=pNko_qukuWLTArCk";
+  const url = "https://www.youtube.com/watch?v=eC8Eov-r1oc";
+  const tg = window.Telegram?.WebApp;
 
-          if (telegram?.initData && typeof telegram.openLink === "function") {
-            telegram.openLink(videoUrl);
-          } else {
-            window.location.href = videoUrl;
-          }
-         };
+  try {
+    if (typeof tg?.openLink === "function" && tg.initData) {
+      tg.openLink(url, { try_instant_view: false });
+    } else {
+      window.location.assign(url);
+    }
+  } catch {
+    window.location.assign(url);
+  }
+
+  // Ссылка останется на экране, если Telegram не открыл видео.
+  const link = document.createElement("a");
+  link.href = url;
+  link.textContent = "Смотреть поздравление ▶";
+  link.className = "primary";
+  link.style.cssText =
+    "display:block;text-align:center;text-decoration:none";
+
+  link.onclick = event => {
+    if (typeof tg?.openLink === "function" && tg.initData) {
+      try {
+        tg.openLink(url, { try_instant_view: false });
+        event.preventDefault();
+      } catch {}
+    }
+  };
+
+  document.querySelector(".win").append(link);
+};
         }
       }
 
